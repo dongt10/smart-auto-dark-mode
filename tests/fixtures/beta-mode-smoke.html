@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fixture: beta mode smoke</title>
+<style>
+  body { background: #ffffff; color: #202124; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; }
+  main { background: #ffffff; color: #202124; border: 1px solid #dadce0; padding: 12px; }
+  .toolbar { background: #f1f3f4; border: 1px solid #dadce0; color: #202124; margin-bottom: 10px; padding: 10px; }
+  img { display: block; width: 80px; height: 48px; background: linear-gradient(45deg, #ff8a00, #e52e71); }
+  #result { font: 12px ui-monospace, Menlo, monospace; margin-top: 10px; white-space: pre-wrap; }
+</style>
+<script>
+  Object.defineProperty(window, 'chrome', {
+    value: {
+      storage: {
+        local: {
+          get(_keys, callback) {
+            callback({
+              enabled: true,
+              darkness: 100,
+              whitelist: [],
+              siteModes: { localhost: 'beta' },
+            });
+          },
+          set() {},
+        },
+        onChanged: { addListener() {} },
+      },
+      runtime: { onMessage: { addListener() {} } },
+    },
+    configurable: true,
+  });
+</script>
+<script src="../../content.js"></script>
+</head>
+<body>
+  <main>
+    <div class="toolbar">Beta renderer</div>
+    <p>This fixture should use the filter-based beta renderer.</p>
+    <img alt="media sample">
+    <div id="result" data-status="">running...</div>
+  </main>
+
+<script>
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const result = document.getElementById('result');
+
+  async function run() {
+    await wait(350);
+
+    const style = document.getElementById('__auto_dark_mode_styles__');
+    const root = document.documentElement;
+    const rootFilter = getComputedStyle(root).filter;
+    const mediaFilter = getComputedStyle(document.querySelector('img')).filter;
+    const betaApplied = root.getAttribute('data-adm-mode') === 'beta';
+    const noPerElementTheme = !document.querySelector('[data-adm-bg], [data-adm-fg], [data-adm-border]');
+    const ok = !!style && betaApplied && rootFilter !== 'none' && mediaFilter !== 'none' && noPerElementTheme;
+
+    result.dataset.status = ok ? 'pass' : 'fail';
+    result.textContent =
+      (ok ? 'PASS' : 'FAIL') +
+      '\nbeta applied: ' + betaApplied +
+      '\nroot filter: ' + rootFilter +
+      '\nmedia filter: ' + mediaFilter +
+      '\nper-element theme attrs absent: ' + noPerElementTheme;
+  }
+
+  run().catch((err) => {
+    result.dataset.status = 'fail';
+    result.textContent = 'FAIL\n' + err.message;
+  });
+</script>
+</body></html>

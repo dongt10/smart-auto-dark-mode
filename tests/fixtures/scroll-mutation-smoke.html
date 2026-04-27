@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fixture: scroll mutation smoke</title>
+<style>
+  body { background: #f7f8fa; color: #202124; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; }
+  main { background: #f7f8fa; color: #202124; border: 1px solid #dadce0; padding: 12px; }
+  .toolbar { background: #ffffff; border: 1px solid #dadce0; color: #202124; margin-bottom: 10px; padding: 10px; }
+  .mail-list { background: #ffffff; border: 1px solid #dadce0; height: 140px; overflow: auto; }
+  .mail-row { background: #ffffff; border-bottom: 1px solid #e0e0e0; color: #202124; height: 40px; line-height: 40px; padding: 0 12px; }
+  #result { font: 12px ui-monospace, Menlo, monospace; margin-top: 10px; white-space: pre-wrap; }
+</style>
+<script>
+  window.__admCounting = false;
+  window.__admSetAttributeCount = 0;
+
+  const nativeSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, value) {
+    if (window.__admCounting && String(name).indexOf('data-adm-') === 0) {
+      window.__admSetAttributeCount += 1;
+    }
+    return nativeSetAttribute.call(this, name, value);
+  };
+
+  Object.defineProperty(window, 'chrome', {
+    value: {
+      storage: {
+        local: {
+          get(_keys, callback) { callback({ enabled: true, darkness: 100, whitelist: [] }); },
+          set() {},
+        },
+        onChanged: { addListener() {} },
+      },
+      runtime: { onMessage: { addListener() {} } },
+    },
+    configurable: true,
+  });
+</script>
+<script src="../../content.js"></script>
+</head>
+<body>
+  <main>
+    <div class="toolbar">Inbox</div>
+    <div class="mail-list" id="mailList">
+      <div class="mail-row">Message row 1</div>
+      <div class="mail-row">Message row 2</div>
+      <div class="mail-row">Message row 3</div>
+      <div class="mail-row">Message row 4</div>
+      <div class="mail-row">Message row 5</div>
+      <div class="mail-row">Message row 6</div>
+      <div class="mail-row">Message row 7</div>
+      <div class="mail-row">Message row 8</div>
+    </div>
+    <div id="result" data-status="">running...</div>
+  </main>
+
+<script>
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const result = document.getElementById('result');
+
+  async function run() {
+    await wait(4600);
+
+    const rows = Array.from(document.querySelectorAll('.mail-row'));
+    window.__admSetAttributeCount = 0;
+    window.__admCounting = true;
+
+    for (let step = 0; step < 12; step++) {
+      rows.forEach((row, index) => {
+        row.style.transform = 'translateY(' + ((step + index) % 5) + 'px)';
+        row.style.height = (40 + (step % 2)) + 'px';
+      });
+      await wait(15);
+    }
+
+    await wait(350);
+    const layoutOnlyWrites = window.__admSetAttributeCount;
+
+    window.__admSetAttributeCount = 0;
+    const added = document.createElement('div');
+    added.className = 'mail-row';
+    added.textContent = 'Late message row';
+    document.getElementById('mailList').appendChild(added);
+
+    await wait(350);
+    window.__admCounting = false;
+
+    const lateRowWrites = window.__admSetAttributeCount;
+    const lateRowThemed = added.hasAttribute('data-adm-bg') || added.hasAttribute('data-adm-fg');
+    const ok = layoutOnlyWrites === 0 && lateRowWrites > 0 && lateRowThemed;
+
+    result.dataset.status = ok ? 'pass' : 'fail';
+    result.textContent =
+      (ok ? 'PASS' : 'FAIL') +
+      '\nlayout-only data-adm writes: ' + layoutOnlyWrites +
+      '\nlate-row data-adm writes: ' + lateRowWrites +
+      '\nlate row themed: ' + lateRowThemed;
+  }
+
+  run().catch((err) => {
+    result.dataset.status = 'fail';
+    result.textContent = 'FAIL\n' + err.message;
+  });
+</script>
+</body></html>

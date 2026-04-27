@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fixture: content script smoke</title>
+<style>
+  body { background: #ffffff; color: #111111; font-family: -apple-system, sans-serif; margin: 0; padding: 24px; }
+  main { background: #ffffff; color: #003262; border: 1px solid #dddddd; max-width: 720px; padding: 20px; }
+  .hero { background: #fdb515; color: #003262; border: 1px solid #f0c75e; padding: 24px; }
+  a { color: #1a73e8; }
+  img { width: 72px; height: 48px; display: block; background: linear-gradient(45deg, #ff8a00, #e52e71); }
+</style>
+<script>
+  Object.defineProperty(window, 'chrome', {
+    value: {
+      storage: {
+        local: {
+          get(_keys, callback) { callback({ enabled: true, darkness: 100, whitelist: [] }); },
+          set() {},
+        },
+        onChanged: { addListener() {} },
+      },
+      runtime: { onMessage: { addListener() {} } },
+    },
+    configurable: true,
+  });
+</script>
+<script src="../../content.js"></script>
+</head>
+<body>
+  <main>
+    <div class="hero">UC Berkeley style gold panel with navy text</div>
+    <p>This page should be converted by the real content script without any color inversion filter.</p>
+    <p><a href="#">Sample link</a></p>
+    <img alt="media sample">
+  </main>
+</body></html>

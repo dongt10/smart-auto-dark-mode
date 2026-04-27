@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fixture: late native dark smoke</title>
+<style>
+  body { background: #ffffff; color: #202124; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; }
+  main { background: #ffffff; color: #202124; border: 1px solid #dadce0; padding: 12px; }
+  .toolbar { background: #f1f3f4; border: 1px solid #dadce0; color: #202124; margin-bottom: 10px; padding: 10px; }
+  .row { background: #ffffff; border-bottom: 1px solid #e0e0e0; color: #202124; height: 40px; line-height: 40px; padding: 0 12px; }
+  .native-dark { background: #1f2937; color: #e8eaed; }
+  .native-dark main { background: #202124; color: #e8eaed; border-color: #3c4043; }
+  .native-dark .toolbar { background: #263445; border-color: #3c4043; color: #e8eaed; }
+  .native-dark .row { background: #202124; border-bottom-color: #3c4043; color: #e8eaed; }
+  #result { font: 12px ui-monospace, Menlo, monospace; margin-top: 10px; white-space: pre-wrap; }
+</style>
+<script>
+  Object.defineProperty(window, 'chrome', {
+    value: {
+      storage: {
+        local: {
+          get(_keys, callback) { callback({ enabled: true, darkness: 100, whitelist: [] }); },
+          set() {},
+        },
+        onChanged: { addListener() {} },
+      },
+      runtime: { onMessage: { addListener() {} } },
+    },
+    configurable: true,
+  });
+</script>
+<script src="../../content.js"></script>
+</head>
+<body>
+  <main>
+    <div class="toolbar">Search mail</div>
+    <div class="row">Message row 1</div>
+    <div class="row">Message row 2</div>
+    <div class="row">Message row 3</div>
+    <div id="result" data-status="">running...</div>
+  </main>
+
+<script>
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const result = document.getElementById('result');
+
+  async function run() {
+    await wait(120);
+    const initiallyApplied = !!document.getElementById('__auto_dark_mode_styles__');
+
+    document.body.classList.add('native-dark');
+    await wait(1100);
+
+    const style = document.getElementById('__auto_dark_mode_styles__');
+    const themeRemoved = !style;
+    const darkBg = getComputedStyle(document.querySelector('.toolbar')).backgroundColor;
+    const ok = initiallyApplied && themeRemoved;
+
+    result.dataset.status = ok ? 'pass' : 'fail';
+    result.textContent =
+      (ok ? 'PASS' : 'FAIL') +
+      '\ninitial generated theme applied: ' + initiallyApplied +
+      '\ngenerated theme removed after native dark: ' + themeRemoved +
+      '\nnative toolbar bg: ' + darkBg;
+  }
+
+  run().catch((err) => {
+    result.dataset.status = 'fail';
+    result.textContent = 'FAIL\n' + err.message;
+  });
+</script>
+</body></html>

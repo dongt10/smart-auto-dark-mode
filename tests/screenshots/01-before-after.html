@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Screenshot: before/after</title>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 800px;
+    background: #0d0d10;
+    font-family: -apple-system, sans-serif;
+    color: #f2f2f7;
+    box-sizing: border-box;
+    padding: 40px 56px;
+    overflow: hidden;
+  }
+  h1 { font-size: 38px; margin: 0 0 6px; letter-spacing: -0.5px; }
+  .sub { color: #aeaeb2; font-size: 17px; margin: 0 0 32px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; height: 580px; }
+  .panel { border-radius: 14px; overflow: hidden; box-shadow: 0 14px 48px rgba(0,0,0,0.5); position: relative; }
+  .panel.before { background: #fff; }
+  .panel.after  { background: #000; }
+  .panel iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .badge {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(0,0,0,0.55); color: #fff; padding: 6px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+    backdrop-filter: blur(6px);
+  }
+  .panel.before .badge { background: rgba(0,0,0,0.7); color: #fff; }
+  .panel.after  .badge { background: rgba(255,255,255,0.85); color: #000; }
+  .arrow {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 48px; height: 48px;
+    background: #0a84ff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(10,132,255,0.5);
+    z-index: 10;
+    color: white; font-size: 22px; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+  <h1>Auto-detects dark sites — only fixes the light ones.</h1>
+  <p class="sub">If the page is already dark, the extension stays out of the way. If it's light, dark mode is applied with real dark CSS colors.</p>
+  <div class="pair">
+    <div class="panel before">
+      <div class="badge">BEFORE — light page</div>
+      <iframe src="../fixtures/light-classic.html"></iframe>
+    </div>
+    <div class="arrow">→</div>
+    <div class="panel after" id="afterPanel">
+      <div class="badge">AFTER — auto-darkened</div>
+      <iframe src="../fixtures/light-classic.html" id="afterFrame"></iframe>
+    </div>
+  </div>
+<script>
+  document.getElementById('afterFrame').addEventListener('load', () => {
+    const doc = document.getElementById('afterFrame').contentDocument;
+    const style = doc.createElement('style');
+    style.textContent = `:root{color-scheme:dark!important;--bg:#07090e;--surface:#12161d;--text:#eef2f7;--link:#8ab4f8;--border:#2d343f}html,body{background:var(--bg)!important;color:var(--text)!important}body :where(header,main,article,section,div,blockquote){background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important}a{color:var(--link)!important}button{background:#182433!important;color:var(--text)!important;border-color:var(--border)!important}`;
+    doc.head.appendChild(style);
+  });
+</script>
+</body></html>

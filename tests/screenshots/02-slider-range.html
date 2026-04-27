@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Screenshot: slider range</title>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 800px;
+    background: #0d0d10;
+    font-family: -apple-system, sans-serif;
+    color: #f2f2f7;
+    box-sizing: border-box;
+    padding: 32px 48px 36px;
+    overflow: hidden;
+  }
+  h1 { font-size: 36px; margin: 0 0 4px; letter-spacing: -0.5px; }
+  .sub { color: #aeaeb2; font-size: 16px; margin: 0 0 26px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; height: 600px; }
+  .panel { border-radius: 12px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.5); position: relative; background: #fff; }
+  .panel iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .label {
+    position: absolute; top: 12px; left: 12px;
+    background: #0a84ff; color: #fff; padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .swatch {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,0.6); color: #fff; padding: 5px 11px; border-radius: 6px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <h1>One slider — gray to pure dark, your choice.</h1>
+  <p class="sub">The Darkness slider tunes the generated CSS palette, so text stays bright and media colors stay natural.</p>
+  <div class="grid">
+    <div class="panel"><div class="label">SOFT GRAY</div><div class="swatch">darkness 0 · #30343b</div><iframe src="../fixtures/light-classic.html" data-darkness="0"></iframe></div>
+    <div class="panel"><div class="label">BALANCED</div><div class="swatch">darkness 50 · #1c1f25</div><iframe src="../fixtures/light-classic.html" data-darkness="50"></iframe></div>
+    <div class="panel"><div class="label">NEAR BLACK</div><div class="swatch">darkness 100 · #07090e</div><iframe src="../fixtures/light-classic.html" data-darkness="100"></iframe></div>
+  </div>
+<script>
+  function mix(a,b,t){return Math.round(a+(b-a)*t)}
+  function bgForDarkness(d){const t=d/100;return `rgb(${mix(48,7,t)}, ${mix(52,9,t)}, ${mix(59,14,t)})`}
+  function surfaceForDarkness(d){const t=d/100;return `rgb(${mix(59,18,t)}, ${mix(64,22,t)}, ${mix(72,29,t)})`}
+  document.querySelectorAll('iframe[data-darkness]').forEach((f) => {
+    f.addEventListener('load', () => {
+      const d = +f.dataset.darkness;
+      const doc = f.contentDocument;
+      const style = doc.createElement('style');
+      style.textContent = `:root{color-scheme:dark!important;--bg:${bgForDarkness(d)};--surface:${surfaceForDarkness(d)};--text:#eef2f7;--link:#8ab4f8;--border:#2d343f}html,body{background:var(--bg)!important;color:var(--text)!important}body :where(header,main,article,section,div,blockquote){background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important}a{color:var(--link)!important}button{background:#182433!important;color:var(--text)!important;border-color:var(--border)!important}`;
+      doc.head.appendChild(style);
+    });
+  });
+</script>
+</body></html>

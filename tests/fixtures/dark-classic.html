@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fixture: classic dark page</title>
+<style>
+  body { background: #111418; color: #e9eaee; font-family: -apple-system, sans-serif; margin: 0; padding: 24px; }
+  header { border-bottom: 1px solid #2a2f36; padding-bottom: 12px; margin-bottom: 16px; }
+  main { max-width: 720px; }
+  a { color: #79b8ff; }
+  img.hero { width: 200px; height: 120px; background: linear-gradient(45deg, #00b4d8, #0077b6); display: block; }
+  button { background: #2563eb; color: white; border: 0; padding: 8px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <header><h1>Classic Dark Page</h1><nav><a href="#">Home</a> · <a href="#">About</a></nav></header>
+  <main>
+    <p>This page is already in dark mode: near-black background, light text, blue accent. The detector should classify this as <b>already dark</b>.</p>
+    <img class="hero" alt="hero">
+    <p>More content here so the detector has substance to evaluate.</p>
+    <button>Action</button>
+  </main>
+</body></html>
