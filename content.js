@@ -14,22 +14,27 @@
 
   const STYLE_ID = '__auto_dark_mode_styles__';
   const META_ID = '__auto_dark_mode_meta__';
+  const MODE_STANDARD = 'standard';
+  const MODE_BETA = 'beta';
   const DARK_THRESHOLD = 0.32;       // avg bg luminance below this = already dark
   const LIGHT_TEXT_THRESHOLD = 0.55; // text luminance above this = light text (dark mode signal)
+  const VISIBLE_DARK_RATIO = 0.64;   // visible shell majority needed to treat SPA UIs as dark
 
   // Defaults
   let userEnabled = true;
   let darkness = 100;       // 0..100 — controls how dark the generated theme looks
   let whitelist = [];       // hostnames where extension is disabled
+  let siteModes = {};       // per-host rendering mode overrides
 
   // ---- Storage ----------------------------------------------------------
   function loadPrefs() {
     return new Promise((resolve) => {
       try {
-        chrome.storage.local.get(['enabled', 'darkness', 'whitelist'], (res) => {
+        chrome.storage.local.get(['enabled', 'darkness', 'whitelist', 'siteModes'], (res) => {
           userEnabled = res.enabled !== false;
           if (typeof res.darkness === 'number') darkness = clampDarkness(res.darkness);
           whitelist = Array.isArray(res.whitelist) ? res.whitelist.slice() : [];
+          siteModes = res.siteModes && typeof res.siteModes === 'object' ? { ...res.siteModes } : {};
           resolve();
         });
       } catch (_) {
@@ -57,6 +62,32 @@
     if (!userEnabled) return false;
     if (isWhitelisted()) return false;
     return true;
+  }
+
+  function normalizeMode(mode) {
+    return mode === MODE_BETA ? MODE_BETA : MODE_STANDARD;
+  }
+
+  function currentSiteMode() {
+    return normalizeMode(siteModes[location.hostname]);
+  }
+
+  function setStoredSiteMode(host, mode, callback) {
+    const targetHost = (host || location.hostname || '').trim();
+    if (!targetHost) {
+      if (callback) callback({ ok: false, error: 'empty host' });
+      return;
+    }
+
+    const nextMode = normalizeMode(mode);
+    siteModes = { ...siteModes };
+    if (nextMode === MODE_BETA) siteModes[targetHost] = MODE_BETA;
+    else delete siteModes[targetHost];
+
+    chrome.storage.local.set({ siteModes }, () => {
+      evaluate();
+      if (callback) callback({ ok: true, siteModes, mode: currentSiteMode() });
+    });
   }
 
   // ---- Step 1: hint the page ASAP --------------------------------------
@@ -120,6 +151,46 @@
     return null;
   }
 
+  function sampleVisibleSurfaces() {
+    if (!document.elementFromPoint || !window.innerWidth || !window.innerHeight) {
+      return null;
+    }
+
+    const bgSamples = [];
+    const textSamples = [];
+    const xs = [0.12, 0.28, 0.5, 0.72, 0.88];
+    const ys = [0.12, 0.26, 0.42, 0.58, 0.74, 0.9];
+    const seen = new Set();
+
+    for (const xPct of xs) {
+      for (const yPct of ys) {
+        const el = document.elementFromPoint(
+          Math.max(0, Math.min(window.innerWidth - 1, Math.round(window.innerWidth * xPct))),
+          Math.max(0, Math.min(window.innerHeight - 1, Math.round(window.innerHeight * yPct)))
+        );
+        if (!el || seen.has(el)) continue;
+        seen.add(el);
+
+        const bgLum = effectiveBgLuminance(el);
+        if (bgLum !== null) bgSamples.push(bgLum);
+
+        const textColor = parseColor(getComputedStyle(el).color);
+        if (textColor && textColor.a > 0.35) textSamples.push(relLuminance(textColor));
+      }
+    }
+
+    if (bgSamples.length === 0) return null;
+
+    const bgAvg = bgSamples.reduce((a, b) => a + b, 0) / bgSamples.length;
+    const darkCount = bgSamples.filter((lum) => lum < DARK_THRESHOLD).length;
+    const darkRatio = darkCount / bgSamples.length;
+    const textLum = textSamples.length
+      ? textSamples.reduce((a, b) => a + b, 0) / textSamples.length
+      : null;
+
+    return { bgAvg, darkRatio, textLum, count: bgSamples.length };
+  }
+
   function detectIsDark() {
     const samples = [];
     const root = document.documentElement;
@@ -149,8 +220,23 @@
     }
     const bgIsDark = bgAvg < DARK_THRESHOLD;
     const textIsLight = textLum !== null && textLum > LIGHT_TEXT_THRESHOLD;
-    const isDark = bgIsDark && (textIsLight || textLum === null);
-    return { isDark, bgLum: bgAvg, textLum };
+    let isDark = bgIsDark && (textIsLight || textLum === null);
+
+    const visible = sampleVisibleSurfaces();
+    if (visible) {
+      const visibleTextIsLight = visible.textLum !== null && visible.textLum > LIGHT_TEXT_THRESHOLD;
+      if (visible.darkRatio >= VISIBLE_DARK_RATIO && (visibleTextIsLight || visible.textLum === null)) {
+        isDark = true;
+      }
+    }
+
+    return {
+      isDark,
+      bgLum: visible && isDark ? visible.bgAvg : bgAvg,
+      textLum: visible && visible.textLum !== null ? visible.textLum : textLum,
+      visibleBgLum: visible ? visible.bgAvg : null,
+      visibleDarkRatio: visible ? visible.darkRatio : null,
+    };
   }
 
   // ---- Application ------------------------------------------------------
@@ -178,6 +264,10 @@
   const MEDIA_SELECTOR = 'img, video, picture, iframe, canvas, svg, embed, object';
   const THEME_VARS = ['--adm-bg-color', '--adm-fg-color', '--adm-border-color'];
   const MAX_THEME_ELEMENTS = 6000;
+  const MAX_PENDING_THEME_ROOTS = 250;
+  // Virtualized apps like Gmail update layout-only inline styles while scrolling.
+  const COLOR_RELEVANT_STYLE = /(?:^|;)\s*(?:background(?:-color|-image)?|color|border(?:-(?:top|right|bottom|left))?(?:-color)?|box-shadow|text-shadow|fill|stroke|opacity|filter|--[\w-]*(?:color|bg|background|border|surface|theme|dark|light))\s*:/i;
+  const OWN_STYLE_VAR = /(?:^|;)\s*--adm-(?:bg|fg|border)-color\s*:[^;]*/gi;
 
   let themeApplied = false;
   let isApplyingTheme = false;
@@ -322,6 +412,10 @@
     if (el.getAttribute('style') === '') el.removeAttribute('style');
   }
 
+  function clearBetaThemeAttribute() {
+    if (document.documentElement) document.documentElement.removeAttribute('data-adm-mode');
+  }
+
   function clearThemeAttributes() {
     clearElementTheme(document.documentElement);
     clearElementTheme(document.body);
@@ -374,15 +468,20 @@
     }
   }
 
+  function themeSubtree(root, palette) {
+    if (!root || root.nodeType !== 1) return;
+    themeElement(root, palette);
+    if (!root.querySelectorAll) return;
+
+    const all = root.querySelectorAll('*');
+    const limit = Math.min(all.length, MAX_THEME_ELEMENTS);
+    for (let i = 0; i < limit; i++) themeElement(all[i], palette);
+  }
+
   function themeDocument() {
     const palette = paletteForDarkness(darkness);
     themeElement(document.documentElement, palette);
-    if (document.body) {
-      themeElement(document.body, palette);
-      const all = document.body.querySelectorAll('*');
-      const limit = Math.min(all.length, MAX_THEME_ELEMENTS);
-      for (let i = 0; i < limit; i++) themeElement(all[i], palette);
-    }
+    if (document.body) themeSubtree(document.body, palette);
   }
 
   function buildCss() {
@@ -445,6 +544,7 @@
   function applyTheme() {
     themeApplied = true;
     isApplyingTheme = true;
+    clearBetaThemeAttribute();
 
     const existing = document.getElementById(STYLE_ID);
     if (existing) existing.disabled = true;
@@ -459,10 +559,118 @@
     }
   }
 
+  function buildBetaCss() {
+    const t = clamp(darkness / 100, 0, 1);
+    const brightness = (0.98 - 0.08 * t).toFixed(2);
+    const contrast = (0.92 + 0.08 * t).toFixed(2);
+    return `
+      :root[data-adm-mode="beta"] {
+        color-scheme: dark !important;
+        background-color: #ffffff !important;
+        filter: invert(1) hue-rotate(180deg) brightness(${brightness}) contrast(${contrast}) !important;
+      }
+      :root[data-adm-mode="beta"] body {
+        background-color: #ffffff !important;
+      }
+      :root[data-adm-mode="beta"] img,
+      :root[data-adm-mode="beta"] video,
+      :root[data-adm-mode="beta"] picture,
+      :root[data-adm-mode="beta"] canvas,
+      :root[data-adm-mode="beta"] iframe,
+      :root[data-adm-mode="beta"] embed,
+      :root[data-adm-mode="beta"] object,
+      :root[data-adm-mode="beta"] svg {
+        filter: invert(1) hue-rotate(180deg) brightness(${(1 / Number(brightness)).toFixed(2)}) contrast(${(1 / Number(contrast)).toFixed(2)}) !important;
+      }
+    `;
+  }
+
+  function applyBetaTheme() {
+    themeApplied = true;
+    isApplyingTheme = true;
+
+    try {
+      clearThemeAttributes();
+      document.documentElement.setAttribute('data-adm-mode', MODE_BETA);
+      const style = ensureThemeStyle();
+      style.textContent = buildBetaCss();
+      style.disabled = false;
+    } finally {
+      setTimeout(() => { isApplyingTheme = false; }, 0);
+    }
+  }
+
+  function detectWithoutGeneratedTheme() {
+    const style = document.getElementById(STYLE_ID);
+    const wasDisabled = style ? style.disabled : null;
+    const oldMode = document.documentElement ? document.documentElement.getAttribute('data-adm-mode') : null;
+    if (style) style.disabled = true;
+    clearBetaThemeAttribute();
+
+    try {
+      return detectIsDark();
+    } finally {
+      if (style) style.disabled = wasDisabled;
+      if (oldMode) document.documentElement.setAttribute('data-adm-mode', oldMode);
+    }
+  }
+
+  function compactThemeRoots(roots) {
+    const compact = [];
+    const seen = new Set();
+
+    for (const root of roots) {
+      const el = root && (root.nodeType === 1 ? root : root.parentElement);
+      if (!el || seen.has(el)) continue;
+      if (!document.documentElement.contains(el)) continue;
+      if (el === document.documentElement || el === document.body) return null;
+      if (compact.some((parent) => parent.contains(el))) continue;
+
+      for (let i = compact.length - 1; i >= 0; i--) {
+        if (el.contains(compact[i])) compact.splice(i, 1);
+      }
+
+      seen.add(el);
+      compact.push(el);
+      if (compact.length >= MAX_PENDING_THEME_ROOTS) return null;
+    }
+
+    return compact;
+  }
+
+  function refreshThemeRoots(roots) {
+    if (currentSiteMode() === MODE_BETA) {
+      applyBetaTheme();
+      return;
+    }
+
+    const compact = compactThemeRoots(roots);
+    if (!compact) {
+      applyTheme();
+      return;
+    }
+    if (compact.length === 0) return;
+
+    themeApplied = true;
+    isApplyingTheme = true;
+
+    try {
+      const style = ensureThemeStyle();
+      style.textContent = buildCss();
+      style.disabled = false;
+
+      const palette = paletteForDarkness(darkness);
+      compact.forEach((root) => themeSubtree(root, palette));
+    } finally {
+      setTimeout(() => { isApplyingTheme = false; }, 0);
+    }
+  }
+
   function removeTheme() {
     themeApplied = false;
     const el = document.getElementById(STYLE_ID);
     if (el) el.remove();
+    clearBetaThemeAttribute();
     clearThemeAttributes();
   }
 
@@ -481,11 +689,12 @@
       clearHints();
       return;
     }
-    if (themeApplied) {
-      applyTheme();
+    if (currentSiteMode() === MODE_BETA) {
+      lastResult = null;
+      applyBetaTheme();
       return;
     }
-    const result = detectIsDark();
+    const result = detectWithoutGeneratedTheme();
     lastResult = result;
     if (result.isDark) {
       removeTheme();
@@ -502,15 +711,97 @@
     window.addEventListener('load', () => evaluate());
   }
 
+  function mutationElement(node) {
+    if (!node) return null;
+    if (node.nodeType === 1) return node;
+    return node.parentElement || null;
+  }
+
+  function isOwnNode(el) {
+    return el && (el.id === STYLE_ID || el.id === META_ID);
+  }
+
+  function styleMutationLooksColorRelevant(el, oldValue) {
+    const current = el && el.getAttribute ? (el.getAttribute('style') || '').replace(OWN_STYLE_VAR, '') : '';
+    const previous = (oldValue || '').replace(OWN_STYLE_VAR, '');
+    return COLOR_RELEVANT_STYLE.test(current) || COLOR_RELEVANT_STYLE.test(previous);
+  }
+
+  function collectMutationWork(mutations) {
+    const roots = [];
+    let needsFullEvaluate = false;
+
+    for (const mutation of mutations) {
+      const target = mutationElement(mutation.target);
+      if (isOwnNode(target)) continue;
+
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          const el = mutationElement(node);
+          if (!el || isOwnNode(el)) return;
+
+          const tag = el.tagName ? el.tagName.toLowerCase() : '';
+          if (tag === 'style' || tag === 'link') {
+            needsFullEvaluate = true;
+            return;
+          }
+
+          roots.push(el);
+        });
+        continue;
+      }
+
+      if (mutation.type !== 'attributes' || !target) continue;
+
+      if (mutation.attributeName === 'style' && !styleMutationLooksColorRelevant(target, mutation.oldValue)) {
+        continue;
+      }
+
+      if (target === document.documentElement || target === document.body) {
+        needsFullEvaluate = true;
+      } else {
+        roots.push(target);
+      }
+    }
+
+    return { needsFullEvaluate, roots };
+  }
+
   function watchForChanges() {
     let scheduled = false;
-    const observer = new MutationObserver(() => {
+    let pendingFullEvaluate = false;
+    let pendingRoots = [];
+
+    const observer = new MutationObserver((mutations) => {
       if (isApplyingTheme) return;
+      if (currentSiteMode() === MODE_BETA) {
+        if (
+          isActive() &&
+          (!document.getElementById(STYLE_ID) ||
+            document.documentElement.getAttribute('data-adm-mode') !== MODE_BETA)
+        ) {
+          applyBetaTheme();
+        }
+        return;
+      }
+
+      const work = collectMutationWork(mutations);
+      if (!work.needsFullEvaluate && work.roots.length === 0) return;
+
+      pendingFullEvaluate = pendingFullEvaluate || work.needsFullEvaluate || !themeApplied;
+      if (themeApplied && !pendingFullEvaluate) pendingRoots = pendingRoots.concat(work.roots);
+
       if (scheduled) return;
       scheduled = true;
       setTimeout(() => {
         scheduled = false;
-        evaluate();
+        const shouldFullEvaluate = pendingFullEvaluate || !themeApplied;
+        const roots = pendingRoots;
+        pendingFullEvaluate = false;
+        pendingRoots = [];
+
+        if (shouldFullEvaluate) evaluate();
+        else refreshThemeRoots(roots);
       }, themeApplied ? 120 : 0);
     });
     if (document.documentElement) {
@@ -518,6 +809,7 @@
         childList: true,
         subtree: true,
         attributes: true,
+        attributeOldValue: true,
         attributeFilter: ['class', 'data-theme', 'data-color-mode', 'style'],
       });
     }
@@ -536,8 +828,10 @@
           whitelist: whitelist.slice(),
           host: location.hostname,
           isWhitelisted: isWhitelisted(),
+          siteMode: currentSiteMode(),
           detection: result,
           themeApplied: !!document.getElementById(STYLE_ID),
+          betaApplied: document.documentElement.getAttribute('data-adm-mode') === MODE_BETA,
         });
         return;
       }
@@ -555,9 +849,15 @@
         chrome.storage.local.set({ darkness });
         // If the generated theme is currently applied, refresh it with the
         // new palette; otherwise leave already-dark sites untouched.
-        if (themeApplied || document.getElementById(STYLE_ID)) applyTheme();
+        if (currentSiteMode() === MODE_BETA) applyBetaTheme();
+        else if (themeApplied || document.getElementById(STYLE_ID)) applyTheme();
         sendResponse({ ok: true, darkness });
         return;
+      }
+
+      if (msg.action === 'setSiteMode') {
+        setStoredSiteMode(msg.host, msg.mode, sendResponse);
+        return true; // async
       }
 
       if (msg.action === 'addToWhitelist') {
@@ -590,6 +890,7 @@
       if (changes.enabled) userEnabled = changes.enabled.newValue !== false;
       if (changes.darkness) darkness = clampDarkness(changes.darkness.newValue);
       if (changes.whitelist) whitelist = Array.isArray(changes.whitelist.newValue) ? changes.whitelist.newValue.slice() : [];
+      if (changes.siteModes) siteModes = changes.siteModes.newValue && typeof changes.siteModes.newValue === 'object' ? { ...changes.siteModes.newValue } : {};
       evaluate();
     });
   } catch (_) {}

@@ -4,142 +4,435 @@
 <meta charset="utf-8">
 <title>Auto Dark Mode</title>
 <style>
-  :root { color-scheme: dark; }
-  body {
-    width: 300px;
-    margin: 0;
-    padding: 14px 16px 12px;
-    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #1c1c1e;
-    color: #f2f2f7;
+  :root {
+    color-scheme: dark;
+    --bg: #101216;
+    --surface: #181b20;
+    --surface-2: #20242b;
+    --line: #303641;
+    --text: #f5f7fb;
+    --text-mid: #c4ccd7;
+    --text-muted: #87909f;
+    --primary: #5aa8ff;
+    --primary-strong: #7fbcff;
+    --success: #62d884;
+    --warning: #f4b95f;
+    --danger: #ff7a70;
+    --shadow: rgba(0, 0, 0, 0.3);
   }
-  h1 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
-  h2 { margin: 14px 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #8e8e93; letter-spacing: 0.5px; }
+  * { box-sizing: border-box; }
+  body {
+    width: 332px;
+    margin: 0;
+    padding: 14px;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      linear-gradient(180deg, #171a20 0%, var(--bg) 44%, #0d0f13 100%);
+    color: var(--text);
+  }
+  button,
+  input {
+    font: inherit;
+  }
+  button {
+    color: inherit;
+  }
+  .app-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 10px;
+  }
+  .app-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    box-shadow: 0 8px 22px var(--shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
+  h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.1;
+    letter-spacing: 0;
+  }
+  h2 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .section {
+    margin-bottom: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(24, 27, 32, 0.96);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 34px;
+    padding: 10px 12px 6px;
+  }
   .row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #2c2c2e;
+    gap: 12px;
+    min-height: 48px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
   }
   .row:last-child { border-bottom: 0; }
-  .label { color: #d1d1d6; }
+  .label {
+    display: block;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .sub-label {
+    display: block;
+    margin-top: 1px;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
   .pill {
     display: inline-block;
-    padding: 2px 8px;
+    flex: 0 0 auto;
+    max-width: 126px;
+    padding: 4px 8px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 1px solid transparent;
   }
-  .pill.dark { background: #0a84ff33; color: #64a9ff; }
-  .pill.light { background: #ff9f0a33; color: #ffb340; }
-  .pill.applied { background: #30d15833; color: #5dd97d; }
-  .pill.off { background: #3a3a3c; color: #aeaeb2; }
+  .pill.dark {
+    background: rgba(90, 168, 255, 0.16);
+    border-color: rgba(90, 168, 255, 0.32);
+    color: var(--primary-strong);
+  }
+  .pill.light {
+    background: rgba(244, 185, 95, 0.16);
+    border-color: rgba(244, 185, 95, 0.34);
+    color: var(--warning);
+  }
+  .pill.applied {
+    background: rgba(98, 216, 132, 0.14);
+    border-color: rgba(98, 216, 132, 0.32);
+    color: var(--success);
+  }
+  .pill.off {
+    background: rgba(135, 144, 159, 0.12);
+    border-color: rgba(135, 144, 159, 0.22);
+    color: var(--text-muted);
+  }
 
   .toggle {
     position: relative;
-    width: 38px; height: 22px;
-    background: #3a3a3c;
+    width: 42px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #343944;
     border-radius: 999px;
     cursor: pointer;
-    transition: background 120ms;
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
     flex-shrink: 0;
   }
-  .toggle.on { background: #30d158; }
-  .toggle::after {
-    content: ""; position: absolute; top: 2px; left: 2px;
-    width: 18px; height: 18px; background: #fff; border-radius: 50%;
-    transition: transform 120ms;
+  .toggle.on {
+    background: var(--primary);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(90, 168, 255, 0.16);
   }
-  .toggle.on::after { transform: translateX(16px); }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: transform 140ms ease;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+  .toggle:focus-visible,
+  .segmented button:focus-visible,
+  .primary:focus-visible,
+  .wl-remove:focus-visible,
+  input[type="range"]:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 
   /* Slider */
-  .slider-row { padding: 8px 0; border-bottom: 1px solid #2c2c2e; }
-  .slider-head { display: flex; justify-content: space-between; align-items: baseline; }
-  .slider-value { font-variant-numeric: tabular-nums; color: #8e8e93; font-size: 12px; }
+  .slider-row {
+    padding: 10px 12px 12px;
+  }
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .slider-value {
+    color: var(--text-mid);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+  }
   input[type="range"] {
-    -webkit-appearance: none; appearance: none;
-    width: 100%; height: 4px;
-    background: #3a3a3c;
-    border-radius: 2px;
+    --slider-progress: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background:
+      linear-gradient(90deg, var(--primary) 0%, var(--primary) var(--slider-progress), #343a45 var(--slider-progress), #343a45 100%);
+    border-radius: 999px;
     outline: none;
-    margin: 8px 0 2px;
+    margin: 10px 0 4px;
   }
   input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 16px; height: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    background: #0a84ff;
+    background: #f7fbff;
     cursor: pointer;
-    border: 0;
+    border: 3px solid var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.34);
   }
-  .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #6e6e73; padding: 0 1px; }
+  .slider-ticks {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 0 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Mode */
+  .mode-row {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .mode-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .mode-value {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    padding: 3px;
+    background: #111419;
+    border: 1px solid #2b313b;
+    border-radius: 8px;
+  }
+  .segmented button {
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 7px 8px;
+    min-height: 30px;
+  }
+  .segmented button.active {
+    background: var(--surface-2);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 12px rgba(0, 0, 0, 0.22);
+  }
+  .segmented button[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 
   /* Whitelist */
-  .wl-row { display: flex; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid #2c2c2e; }
-  .wl-row:last-child { border-bottom: 0; }
-  .wl-host { flex: 1; word-break: break-all; color: #d1d1d6; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
-  .wl-empty { color: #6e6e73; font-size: 12px; padding: 6px 0; }
-  .wl-remove {
-    background: transparent; color: #aeaeb2; border: 0; cursor: pointer;
-    font-size: 14px; padding: 2px 6px; line-height: 1;
+  .whitelist-list {
+    padding: 0 12px 8px;
   }
-  .wl-remove:hover { color: #ff453a; }
+  .wl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+  .wl-row:last-child { border-bottom: 0; }
+  .wl-host {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-mid);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .wl-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 8px 0 4px;
+  }
+  .wl-remove {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    background: #222730;
+    color: var(--text-muted);
+    border: 1px solid #333a45;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+  }
+  .wl-remove:hover {
+    color: var(--danger);
+    border-color: rgba(255, 122, 112, 0.45);
+  }
 
   button.primary {
     width: 100%;
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: #0a84ff;
-    color: #fff;
-    border: 0; border-radius: 6px;
+    min-height: 38px;
+    padding: 9px 12px;
+    background: var(--primary);
+    color: #081019;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
     cursor: pointer;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 750;
   }
-  button.primary:hover { background: #0a72d8; }
-  button.primary.danger { background: #2c2c2e; color: #ff8c80; }
-  button.primary.danger:hover { background: #3a3a3c; }
+  .site-action {
+    padding: 10px 12px 12px;
+  }
+  button.primary:hover { background: var(--primary-strong); }
+  button.primary.danger {
+    background: rgba(255, 122, 112, 0.12);
+    color: var(--danger);
+    border-color: rgba(255, 122, 112, 0.34);
+  }
+  button.primary.danger:hover { background: rgba(255, 122, 112, 0.18); }
   button.primary[disabled] { opacity: 0.4; cursor: not-allowed; }
 
   .host-label {
     font-family: ui-monospace, Menlo, monospace;
     font-size: 11px;
-    color: #8e8e93;
-    margin-top: 2px;
-    word-break: break-all;
+    color: var(--text-mid);
+    min-width: 0;
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .stats { margin-top: 10px; font-size: 11px; color: #6e6e73; font-variant-numeric: tabular-nums; }
+  .count {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .stats {
+    min-height: 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
-  <h1>Auto Dark Mode</h1>
-
-  <div class="row">
-    <span class="label">Extension</span>
-    <div class="toggle" id="globalToggle"></div>
-  </div>
-
-  <div class="row">
-    <span class="label">This page</span>
-    <span class="pill" id="statusPill">…</span>
-  </div>
-
-  <div class="slider-row">
-    <div class="slider-head">
-      <span class="label">Darkness</span>
-      <span class="slider-value" id="sliderValue">100</span>
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon48.png" alt="" class="app-icon">
+      <div>
+        <h1>Auto Dark Mode</h1>
+      </div>
     </div>
-    <input type="range" id="darknessSlider" min="0" max="100" value="100">
-    <div class="slider-ticks"><span>gray</span><span>dark</span></div>
-  </div>
+    <span class="pill off" id="statusPill" aria-live="polite">...</span>
+  </header>
 
-  <h2>This site</h2>
-  <div id="hostLabel" class="host-label">…</div>
-  <button class="primary" id="whitelistToggle">Disable on this site</button>
+  <section class="section">
+    <div class="row">
+      <div>
+        <span class="label">Extension</span>
+        <span class="sub-label">Across all sites</span>
+      </div>
+      <button type="button" class="toggle" id="globalToggle" role="switch" aria-checked="false" aria-label="Toggle extension"></button>
+    </div>
 
-  <h2>Whitelist <span id="whitelistCount" style="color:#6e6e73; font-weight:normal"></span></h2>
-  <div id="whitelist"></div>
+    <div class="slider-row">
+      <div class="slider-head">
+        <span class="label">Darkness</span>
+        <span class="slider-value" id="sliderValue">100%</span>
+      </div>
+      <input type="range" id="darknessSlider" min="0" max="100" value="100" aria-label="Darkness">
+      <div class="slider-ticks"><span>Soft</span><span>Deep</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>This Site</h2>
+      <div id="hostLabel" class="host-label">...</div>
+    </div>
+    <div class="mode-row">
+      <div class="mode-head">
+        <span class="label">Renderer</span>
+        <span class="mode-value" id="modeLabel">Standard</span>
+      </div>
+      <div class="segmented" role="group" aria-label="Renderer mode">
+        <button type="button" id="standardMode" aria-pressed="true">Standard</button>
+        <button type="button" id="betaMode" aria-pressed="false">Beta</button>
+      </div>
+    </div>
+    <div class="site-action">
+      <button class="primary danger" id="whitelistToggle">Disable on this site</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Whitelist</h2>
+      <span id="whitelistCount" class="count"></span>
+    </div>
+    <div id="whitelist" class="whitelist-list"></div>
+  </section>
 
   <div class="stats" id="stats"></div>
 
