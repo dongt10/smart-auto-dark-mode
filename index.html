@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Better Simple Auto Dark Mode</title>
+<style>
+  body {
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: #f2f2f7;
+    background: linear-gradient(180deg, #1c1c1e 0%, #2c2c2e 100%);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 64px 24px;
+    box-sizing: border-box;
+  }
+  .card {
+    max-width: 640px;
+    text-align: center;
+  }
+  .logo {
+    width: 96px; height: 96px;
+    border-radius: 22px;
+    background: #1c2133;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+  .moon {
+    width: 56px; height: 56px;
+    background: #ffcf56;
+    border-radius: 50%;
+    box-shadow: inset -16px 0 0 0 #1c2133;
+  }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.3px; }
+  .tagline { color: #aeaeb2; margin: 0 0 28px; }
+  .links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .links a {
+    color: #f2f2f7;
+    background: #3a3a3c;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .links a:hover { background: #48484a; }
+  .links a.primary { background: #0a84ff; }
+  .links a.primary:hover { background: #0a72d8; }
+  .features { text-align: left; margin: 36px auto 0; max-width: 540px; color: #d1d1d6; }
+  .features h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin: 0 0 8px; }
+  .features ul { padding-left: 20px; }
+  .features li { margin: 6px 0; }
+  footer { color: #6e6e73; font-size: 13px; margin-top: 48px; }
+  footer a { color: #aeaeb2; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><div class="moon"></div></div>
+  <h1>Better Simple Auto Dark Mode</h1>
+  <p class="tagline">A Chrome extension that detects whether a site is already dark, and only switches the ones that aren't.</p>
+  <div class="links">
+    <a class="primary" href="https://github.com/dongt10/better-simple-auto-dark-mode">View on GitHub</a>
+    <a href="privacy.html">Privacy Policy</a>
+  </div>
+
+  <div class="features">
+    <h2>What it does</h2>
+    <ul>
+      <li>Auto-detects dark sites by sampling background &amp; text luminance — leaves them alone.</li>
+      <li>Hints <code>color-scheme: dark</code> first so sites with their own dark theme switch natively.</li>
+      <li>Falls back to generated dark CSS that remaps light surfaces, text, borders, and controls.</li>
+      <li>Leaves media colors natural instead of flipping the entire page.</li>
+      <li>Slider tunes the generated palette from soft gray to near-black.</li>
+      <li>Per-site whitelist with subdomain matching.</li>
+    </ul>
+  </div>
+</div>
+<footer>MIT licensed · <a href="https://github.com/dongt10/better-simple-auto-dark-mode">github.com/dongt10/better-simple-auto-dark-mode</a></footer>
+</body>
+</html>

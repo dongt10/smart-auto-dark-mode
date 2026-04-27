@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Screenshot: popup over page</title>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 800px;
+    background: #0d0d10;
+    font-family: -apple-system, sans-serif;
+    color: #f2f2f7;
+    box-sizing: border-box;
+    padding: 32px 48px 36px;
+    overflow: hidden;
+  }
+  h1 { font-size: 36px; margin: 0 0 4px; letter-spacing: -0.5px; }
+  .sub { color: #aeaeb2; font-size: 16px; margin: 0 0 24px; }
+  .stage { position: relative; width: 100%; height: 620px; border-radius: 14px; overflow: hidden; box-shadow: 0 16px 60px rgba(0,0,0,0.55); }
+  .stage iframe.page { width: 100%; height: 100%; border: 0; display: block; background: #000; }
+  .popup-frame {
+    position: absolute;
+    top: 24px; right: 24px;
+    width: 332px; height: 580px;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 36px rgba(0,0,0,0.65);
+    background: #1c1c1e;
+  }
+  .arrow-tail {
+    position: absolute;
+    top: 4px; right: 56px;
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 14px solid #1c1c1e;
+    filter: drop-shadow(0 -3px 8px rgba(0,0,0,0.4));
+  }
+  .pin-hint {
+    position: absolute;
+    top: -2px; right: 38px;
+    width: 32px; height: 32px;
+    border: 3px solid #0a84ff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(10,132,255,0.25);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.15); opacity: 0.6; } }
+</style>
+</head>
+<body>
+  <h1>One click. See what's happening, tweak it, whitelist it.</h1>
+  <p class="sub">The popup shows live luminance readings, the darkness slider, and a one-tap whitelist button for the current site.</p>
+  <div class="stage">
+    <iframe class="page" src="../fixtures/light-classic.html" id="bgPage"></iframe>
+    <iframe class="popup-frame" src="../../popup.html"></iframe>
+    <div class="arrow-tail"></div>
+  </div>
+<script>
+  // Apply auto dark mode to the bg page (so popup is shown in context)
+  document.getElementById('bgPage').addEventListener('load', () => {
+    const doc = document.getElementById('bgPage').contentDocument;
+    const style = doc.createElement('style');
+    style.textContent = `:root{color-scheme:dark!important;--bg:#07090e;--surface:#12161d;--text:#eef2f7;--link:#8ab4f8;--border:#2d343f}html,body{background:var(--bg)!important;color:var(--text)!important}body :where(header,main,article,section,div,blockquote){background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important}a{color:var(--link)!important}button{background:#182433!important;color:var(--text)!important;border-color:var(--border)!important}`;
+    doc.head.appendChild(style);
+  });
+</script>
+</body></html>

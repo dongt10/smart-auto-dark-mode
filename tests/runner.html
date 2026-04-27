@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Auto Dark Mode — test runner</title>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 16px 22px; background: #fafafa; color: #111; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  h2 { font-size: 14px; margin: 18px 0 8px; }
+  .row { display: grid; grid-template-columns: 220px 320px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ddd; }
+  .row:first-of-type { border-top: 1px solid #ddd; }
+  .meta { font-size: 13px; }
+  .meta b { display: block; }
+  .frame { width: 320px; height: 220px; border: 1px solid #ccc; background: #fff; }
+  .frame iframe { width: 100%; height: 100%; border: 0; }
+  .result { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre-wrap; padding: 8px; background: #f0f0f0; border-radius: 4px; }
+  .pass { color: #1a7e3a; font-weight: 600; }
+  .fail { color: #b00020; font-weight: 600; }
+  .summary { margin: 14px 0 4px; font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Auto Dark Mode — detection &amp; true dark-mode tests</h1>
+<div id="summary" class="summary">running…</div>
+<div id="results"></div>
+
+<h2>Slider intensity tests</h2>
+<div id="sliderResults"></div>
+
+<h2>Whitelist tests</h2>
+<div id="whitelistResults"></div>
+
+<script>
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+function mix(a, b, t) { return Math.round(a + (b - a) * t); }
+function rgbCss(rgb) { return 'rgb(' + rgb.map((n) => clamp(Math.round(n), 0, 255)).join(', ') + ')'; }
+function mixRgb(a, b, t) { return [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)]; }
+function paletteForDarkness(d) {
+  const t = clamp(d / 100, 0, 1);
+  return {
+    pageBg: rgbCss(mixRgb([48, 52, 59], [7, 9, 14], t)),
+    surfaceBg: rgbCss(mixRgb([59, 64, 72], [18, 22, 29], t)),
+    controlBg: rgbCss(mixRgb([66, 72, 82], [24, 29, 38], t)),
+    codeBg: rgbCss(mixRgb([56, 61, 69], [14, 18, 25], t)),
+    text: '#eef2f7',
+    muted: '#c5ccd6',
+    link: '#8ab4f8',
+    border: rgbCss(mixRgb([91, 98, 110], [45, 52, 63], t)),
+  };
+}
+function parseColor(str) {
+  if (!str) return null;
+  const m = str.match(/[\d.]+/g);
+  if (!m || m.length < 3) return null;
+  const [r, g, b] = m.slice(0, 3).map(Number);
+  return { r, g, b, a: m.length >= 4 ? Number(m[3]) : 1 };
+}
+function relLum({ r, g, b }) { return (0.299*r + 0.587*g + 0.114*b) / 255; }
+function effBg(el, getStyle) {
+  while (el) {
+    const c = parseColor(getStyle(el).backgroundColor);
+    if (c && c.a > 0.5) return relLum(c);
+    el = el.parentElement;
+  }
+  return null;
+}
+const DARK_THRESHOLD = 0.32;
+const LIGHT_TEXT_THRESHOLD = 0.55;
+
+function detectIsDark(doc) {
+  const win = doc.defaultView || window;
+  const getStyle = (el) => win.getComputedStyle(el);
+  const samples = [];
+  for (const el of [doc.documentElement, doc.body]) {
+    if (!el) continue;
+    const c = parseColor(getStyle(el).backgroundColor);
+    if (c && c.a > 0.5) samples.push(relLum(c));
+  }
+  for (const sel of ['main','article','[role="main"]','#content','.content','#root','#app']) {
+    const el = doc.querySelector(sel);
+    if (el) {
+      const lum = effBg(el, getStyle);
+      if (lum !== null) samples.push(lum);
+    }
+  }
+  if (samples.length === 0) return { isDark: false, bgLum: null, textLum: null };
+  const bgAvg = samples.reduce((a,b)=>a+b,0)/samples.length;
+  const tc = doc.body ? parseColor(getStyle(doc.body).color) : null;
+  const textLum = tc ? relLum(tc) : null;
+  const bgIsDark = bgAvg < DARK_THRESHOLD;
+  const textIsLight = textLum !== null && textLum > LIGHT_TEXT_THRESHOLD;
+  return { isDark: bgIsDark && (textIsLight || textLum === null), bgLum: bgAvg, textLum };
+}
+
+function applyTrueDarkTheme(doc, darkness) {
+  const STYLE_ID = '__auto_dark_mode_styles__';
+  let style = doc.getElementById(STYLE_ID);
+  if (!style) {
+    style = doc.createElement('style');
+    style.id = STYLE_ID;
+    (doc.head || doc.documentElement).appendChild(style);
+  }
+  const p = paletteForDarkness(darkness);
+  style.textContent = `
+    :root {
+      color-scheme: dark !important;
+      --adm-page-bg: ${p.pageBg};
+      --adm-surface-bg: ${p.surfaceBg};
+      --adm-control-bg: ${p.controlBg};
+      --adm-code-bg: ${p.codeBg};
+      --adm-text: ${p.text};
+      --adm-muted: ${p.muted};
+      --adm-link: ${p.link};
+      --adm-border: ${p.border};
+    }
+    html, body { background-color: var(--adm-page-bg) !important; color: var(--adm-text) !important; }
+    body :where(header, main, article, section, aside, nav, footer, div, table, th, td, blockquote) {
+      background-color: var(--adm-surface-bg) !important;
+      color: var(--adm-text) !important;
+      border-color: var(--adm-border) !important;
+    }
+    a, a * { color: var(--adm-link) !important; }
+    input, textarea, select, button {
+      color-scheme: dark !important;
+      background-color: var(--adm-control-bg) !important;
+      color: var(--adm-text) !important;
+      border-color: var(--adm-border) !important;
+    }
+    code, pre, kbd, samp { background-color: var(--adm-code-bg) !important; color: var(--adm-text) !important; }
+  `;
+  return p;
+}
+
+const SCENARIOS = [
+  { id: 'light-classic',     file: 'fixtures/light-classic.html',    expected: 'light' },
+  { id: 'light-pastel',      file: 'fixtures/light-pastel.html',     expected: 'light' },
+  { id: 'dark-classic',      file: 'fixtures/dark-classic.html',     expected: 'dark'  },
+  { id: 'dark-with-images',  file: 'fixtures/dark-with-images.html', expected: 'dark'  },
+  { id: 'auto-scheme',       file: 'fixtures/auto-scheme.html',      expected: 'either' },
+];
+
+const tally = { pass: 0, fail: 0, total: 0 };
+const results = document.getElementById('results');
+const summary = document.getElementById('summary');
+
+function recordResult(out, ok, label, info) {
+  tally.total++; ok ? tally.pass++ : tally.fail++;
+  out.innerHTML = '<div class="' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'PASS' : 'FAIL') + '</div>' +
+    '<div>' + label + '</div>' + (info ? ('<pre style="margin:4px 0">' + info + '</pre>') : '');
+  updateSummary();
+}
+
+function updateSummary() {
+  summary.textContent = 'pass ' + tally.pass + ' / ' + tally.total + (tally.fail ? '  —  FAIL ' + tally.fail : '');
+  summary.className = 'summary ' + (tally.fail ? 'fail' : 'pass');
+}
+
+// Detection scenarios
+SCENARIOS.forEach((scenario) => {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `<div class="meta"><b>${scenario.id}</b><div>expected: <code>${scenario.expected}</code></div></div>`;
+  const frameWrap = document.createElement('div');
+  frameWrap.className = 'frame';
+  const iframe = document.createElement('iframe');
+  iframe.src = scenario.file;
+  frameWrap.appendChild(iframe);
+  const out = document.createElement('div');
+  out.className = 'result';
+  row.appendChild(frameWrap);
+  row.appendChild(out);
+  results.appendChild(row);
+
+  iframe.addEventListener('load', () => setTimeout(() => {
+    try {
+      const doc = iframe.contentDocument;
+      const before = detectIsDark(doc);
+      let ok, label;
+      if (scenario.expected === 'light') {
+        ok = !before.isDark;
+        label = ok ? 'detected as light -> applying true dark theme' : 'should have been light';
+        if (ok) applyTrueDarkTheme(doc, 50);
+      } else if (scenario.expected === 'dark') {
+        ok = before.isDark && !doc.getElementById('__auto_dark_mode_styles__');
+        label = ok ? 'detected as dark -> leaving alone' : 'should have been dark';
+      } else {
+        ok = true; label = 'informational (matches OS): isDark=' + before.isDark;
+      }
+      recordResult(out, ok, label, JSON.stringify(before, (k,v) => typeof v === 'number' ? +v.toFixed(3) : v, 2));
+    } catch (e) { recordResult(out, false, 'error', e.message); }
+  }, 200));
+});
+
+// Slider intensity tests — open one fixture, apply different darkness levels,
+// confirm generated backgrounds get darker without any page inversion filter.
+window.addEventListener('load', () => setTimeout(() => {
+  const sr = document.getElementById('sliderResults');
+  const iframe = document.createElement('iframe');
+  iframe.src = 'fixtures/light-classic.html';
+  iframe.style.cssText = 'width:240px;height:160px;border:1px solid #ccc;display:block;margin-bottom:8px';
+  sr.appendChild(iframe);
+  iframe.addEventListener('load', () => {
+    const doc = iframe.contentDocument;
+    const out = document.createElement('div');
+    out.className = 'result';
+    sr.appendChild(out);
+
+    const expected = [0, 50, 100];
+    const lines = [];
+    let ok = true;
+    let previousLum = Infinity;
+    for (const darkness of expected) {
+      applyTrueDarkTheme(doc, darkness);
+      const htmlStyle = doc.defaultView.getComputedStyle(doc.documentElement);
+      const bodyStyle = doc.defaultView.getComputedStyle(doc.body);
+      const bg = parseColor(bodyStyle.backgroundColor);
+      const bgLum = bg ? relLum(bg) : 1;
+      const filterValue = htmlStyle.filter;
+      const match = filterValue === 'none' && bgLum < previousLum;
+      if (!match) ok = false;
+      previousLum = bgLum;
+      lines.push('darkness=' + darkness + '  bgLum=' + bgLum.toFixed(3) + '  filter="' + filterValue + '"  ' + (match ? 'OK' : 'MISMATCH'));
+    }
+    recordResult(out, ok, 'slider maps to darker real CSS colors (no invert filter)', lines.join('\n'));
+
+    // Whitelist tests
+    runWhitelistTests();
+  });
+}, 100));
+
+function runWhitelistTests() {
+  const wr = document.getElementById('whitelistResults');
+  const out = document.createElement('div');
+  out.className = 'result';
+  wr.appendChild(out);
+
+  // Simulated whitelist matcher (must match content.js)
+  function isWhitelisted(host, whitelist) {
+    return whitelist.some((h) => h === host || host.endsWith('.' + h));
+  }
+  const cases = [
+    { host: 'github.com',           wl: ['github.com'],         expect: true },
+    { host: 'gist.github.com',      wl: ['github.com'],         expect: true,  note: 'subdomain' },
+    { host: 'github.com.evil.com',  wl: ['github.com'],         expect: false, note: 'reject suffix-attack' },
+    { host: 'example.com',          wl: ['github.com'],         expect: false },
+    { host: 'docs.example.com',     wl: [],                     expect: false },
+    { host: 'foo.bar.example.com',  wl: ['example.com'],        expect: true,  note: 'multi-level subdomain' },
+  ];
+  let ok = true;
+  const lines = [];
+  for (const c of cases) {
+    const got = isWhitelisted(c.host, c.wl);
+    const match = got === c.expect;
+    if (!match) ok = false;
+    lines.push((match ? 'OK ' : 'XX ') + 'host=' + c.host + '  wl=' + JSON.stringify(c.wl) + '  expect=' + c.expect + '  got=' + got + (c.note ? '  // ' + c.note : ''));
+  }
+  recordResult(out, ok, 'whitelist matcher (subdomains, suffix-attack)', lines.join('\n'));
+}
+</script>
+</body></html>

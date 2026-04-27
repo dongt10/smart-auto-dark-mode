@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Auto Dark Mode</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    width: 300px;
+    margin: 0;
+    padding: 14px 16px 12px;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1c1c1e;
+    color: #f2f2f7;
+  }
+  h1 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+  h2 { margin: 14px 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #8e8e93; letter-spacing: 0.5px; }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #2c2c2e;
+  }
+  .row:last-child { border-bottom: 0; }
+  .label { color: #d1d1d6; }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill.dark { background: #0a84ff33; color: #64a9ff; }
+  .pill.light { background: #ff9f0a33; color: #ffb340; }
+  .pill.applied { background: #30d15833; color: #5dd97d; }
+  .pill.off { background: #3a3a3c; color: #aeaeb2; }
+
+  .toggle {
+    position: relative;
+    width: 38px; height: 22px;
+    background: #3a3a3c;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 120ms;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: #30d158; }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; background: #fff; border-radius: 50%;
+    transition: transform 120ms;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Slider */
+  .slider-row { padding: 8px 0; border-bottom: 1px solid #2c2c2e; }
+  .slider-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .slider-value { font-variant-numeric: tabular-nums; color: #8e8e93; font-size: 12px; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    background: #3a3a3c;
+    border-radius: 2px;
+    outline: none;
+    margin: 8px 0 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #0a84ff;
+    cursor: pointer;
+    border: 0;
+  }
+  .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #6e6e73; padding: 0 1px; }
+
+  /* Whitelist */
+  .wl-row { display: flex; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid #2c2c2e; }
+  .wl-row:last-child { border-bottom: 0; }
+  .wl-host { flex: 1; word-break: break-all; color: #d1d1d6; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .wl-empty { color: #6e6e73; font-size: 12px; padding: 6px 0; }
+  .wl-remove {
+    background: transparent; color: #aeaeb2; border: 0; cursor: pointer;
+    font-size: 14px; padding: 2px 6px; line-height: 1;
+  }
+  .wl-remove:hover { color: #ff453a; }
+
+  button.primary {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #0a84ff;
+    color: #fff;
+    border: 0; border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  button.primary:hover { background: #0a72d8; }
+  button.primary.danger { background: #2c2c2e; color: #ff8c80; }
+  button.primary.danger:hover { background: #3a3a3c; }
+  button.primary[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .host-label {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+  .stats { margin-top: 10px; font-size: 11px; color: #6e6e73; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <h1>Auto Dark Mode</h1>
+
+  <div class="row">
+    <span class="label">Extension</span>
+    <div class="toggle" id="globalToggle"></div>
+  </div>
+
+  <div class="row">
+    <span class="label">This page</span>
+    <span class="pill" id="statusPill">…</span>
+  </div>
+
+  <div class="slider-row">
+    <div class="slider-head">
+      <span class="label">Darkness</span>
+      <span class="slider-value" id="sliderValue">100</span>
+    </div>
+    <input type="range" id="darknessSlider" min="0" max="100" value="100">
+    <div class="slider-ticks"><span>gray</span><span>dark</span></div>
+  </div>
+
+  <h2>This site</h2>
+  <div id="hostLabel" class="host-label">…</div>
+  <button class="primary" id="whitelistToggle">Disable on this site</button>
+
+  <h2>Whitelist <span id="whitelistCount" style="color:#6e6e73; font-weight:normal"></span></h2>
+  <div id="whitelist"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
