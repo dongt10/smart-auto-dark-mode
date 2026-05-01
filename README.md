@@ -2,6 +2,20 @@
 
 A Chrome extension that detects whether a site is already in dark mode, and if not, switches it with generated dark CSS instead of color inversion.
 
+## Demos
+
+See the full visual walkthrough on GitHub Pages: [dongt10.github.io/smart-auto-dark-mode](https://dongt10.github.io/smart-auto-dark-mode/)
+
+![Smart Auto Dark Mode overview showing bright pages becoming dark while dark pages stay untouched.](store-assets/human-demo/00-human-demo-poster.png)
+
+| Bright pages become dark | Photos stay normal |
+| --- | --- |
+| ![Before and after comparison showing a bright page converted into a dark page.](store-assets/human-demo/01-before-after-bright-page.png) | ![Demo showing a colorful photo staying normal instead of being inverted.](store-assets/human-demo/02-photos-stay-normal.png) |
+
+| Already-dark sites stay untouched | Simple popup controls |
+| --- | --- |
+| ![Demo showing an already dark site being detected and left unchanged.](store-assets/human-demo/03-dark-sites-left-alone.png) | ![Smart Auto Dark Mode popup controls showing the darkness slider and site controls.](store-assets/human-demo/05-simple-popup-controls.png) |
+
 ## Features
 
 - **Auto-detection** — samples the rendered background and text luminance of `<html>`, `<body>`, and major content roots (`main`, `article`, `#root`, etc.). Already-dark sites are left alone.
@@ -9,6 +23,7 @@ A Chrome extension that detects whether a site is already in dark mode, and if n
 - **Darkness slider (gray ↔ dark)** — tunes the generated dark palette from soft charcoal to near-black without inverting page colors.
 - **Media stays natural** — images, videos, canvases, and SVGs are not inverted. Large background-image sections get a subtle dark overlay instead of a hue flip.
 - **Whitelist** — per-site exclusions with subdomain matching. Adding `github.com` also covers `gist.github.com` but not `github.com.evil.com`.
+- **Beta renderer for tricky sites** — per-site fallback mode can use a simpler renderer for complex apps when the standard generated theme is not the right fit.
 - **Live updates** — the popup writes to `chrome.storage.local`; the content script listens for changes and refreshes the generated theme without a reload. A `MutationObserver` also handles late-loaded content.
 
 ## Install (unpacked)
@@ -26,6 +41,7 @@ Click the moon icon to open the popup:
 - **Extension toggle** — global on/off.
 - **This page** — pill showing the detected state (`already dark`, `light`, `true dark mode`, `whitelisted`, `extension off`).
 - **Darkness slider** — drag left for a softer gray dark mode, right for pure black. Default is `100` (pure dark).
+- **Renderer** — use `Standard` for generated dark CSS, or `Beta` as a per-site fallback for tricky web apps.
 - **This site** — `Disable on this site` adds the current host to the whitelist. Toggles to `Re-enable on this site` once whitelisted.
 - **Whitelist** — list of all whitelisted hosts; `×` to remove an entry.
 
