@@ -43,11 +43,10 @@ LIVE READOUTS
 The popup shows the live luminance values the detector measured (bg lum, text lum) so you can tell at a glance whether a misfire is the detector's fault or the site doing something unusual.
 
 PRIVACY
-No analytics. No telemetry. No remote code. The extension stores three things in your browser's local storage (on/off toggle, slider value, whitelist) and never transmits anything anywhere. Open source — see the code at github.com/dongt10/smart-auto-dark-mode.
+No analytics. No telemetry. No remote code. The extension stores four settings in your browser's local storage (on/off toggle, slider value, whitelist, and per-site renderer mode) and never transmits anything anywhere. Open source — see the code at github.com/dongt10/smart-auto-dark-mode.
 
 PERMISSIONS
 - storage: to remember your settings.
-- scripting: to inject the dark-mode CSS into pages.
 - host permission <all_urls>: required so it can run on every site you visit. Without this, a dark-mode extension can't function.
 ```
 
@@ -83,12 +82,7 @@ Detect whether a website is already in dark mode and apply a dark theme to it if
 
 ### `storage` permission
 ```
-Used to persist three user settings on the local device: a global on/off toggle, the user's chosen darkness slider value (0–100), and a list of hostnames the user has whitelisted to skip. No data leaves the device.
-```
-
-### `scripting` permission
-```
-Used to inject a small CSS stylesheet into pages that need to be darkened. The stylesheet contains generated dark-mode color rules for surfaces, text, borders, and controls. No JavaScript is injected via scripting.executeScript.
+Used to persist four user settings on the local device: a global on/off toggle, the user's chosen darkness slider value (0–100), a list of hostnames the user has whitelisted to skip, and per-site renderer mode choices. No data leaves the device.
 ```
 
 ### Host permission `<all_urls>`

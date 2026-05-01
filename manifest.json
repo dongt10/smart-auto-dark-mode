@@ -3,7 +3,7 @@
   "name": "Smart Auto Dark Mode",
   "version": "1.0.0",
   "description": "Auto-detects sites already in dark mode and skips them. Otherwise applies a smart dark theme with a gray↔dark slider and whitelist.",
-  "permissions": ["storage", "scripting"],
+  "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

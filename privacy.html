@@ -75,12 +75,13 @@
 <p><strong>Smart Auto Dark Mode does not collect, transmit, or store any personal information.</strong> Everything the extension needs runs entirely in your browser, and no data ever leaves your device.</p>
 
 <h2>What the extension stores</h2>
-<p>The extension uses Chrome's local storage (<code>chrome.storage.local</code>) to remember three things between sessions:</p>
+<p>The extension uses Chrome's local storage (<code>chrome.storage.local</code>) to remember four settings between sessions:</p>
 <table>
   <tr><th>Key</th><th>What it stores</th><th>Why</th></tr>
   <tr><td><code>enabled</code></td><td><code>true</code> / <code>false</code></td><td>Whether the extension is globally on or off.</td></tr>
   <tr><td><code>darkness</code></td><td>a number from 0 to 100</td><td>Your chosen darkness slider position.</td></tr>
   <tr><td><code>whitelist</code></td><td>a list of hostnames (e.g. <code>github.com</code>)</td><td>Sites where you've turned the extension off.</td></tr>
+  <tr><td><code>siteModes</code></td><td>hostnames mapped to renderer choices</td><td>Sites you've switched to Beta mode.</td></tr>
 </table>
 <p>This data is stored on your computer only. It is <strong>not</strong> synced to any server, <strong>not</strong> shared with the developer, and <strong>not</strong> shared with any third party. Uninstalling the extension removes all of it.</p>
 
@@ -96,8 +97,7 @@
 
 <h2>Permissions and why they're needed</h2>
 <ul>
-  <li><strong><code>storage</code></strong> — to save your settings (the three keys above) on your device.</li>
-  <li><strong><code>scripting</code></strong> — to inject the dark-mode CSS into pages.</li>
+  <li><strong><code>storage</code></strong> — to save your settings (the four keys above) on your device.</li>
   <li><strong>Host permission <code>&lt;all_urls&gt;</code></strong> — required so the extension can run on every site you visit and apply (or skip) dark mode. Without this, the extension can't function.</li>
 </ul>
 <p>The extension reads only what's needed to compute background luminance (computed CSS values from <code>&lt;html&gt;</code>, <code>&lt;body&gt;</code>, and major content roots) to decide whether a page is already dark. This computation happens locally in the page's context and produces only two numbers (<code>bgLum</code>, <code>textLum</code>) which are shown in the popup and never transmitted.</p>
