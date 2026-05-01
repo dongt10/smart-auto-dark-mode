@@ -4,82 +4,547 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Auto Dark Mode</title>
+<meta name="description" content="A Chrome extension that detects bright pages, keeps dark pages alone, and applies a generated dark theme without ruining photos or videos.">
+<link rel="icon" href="icons/icon48.png">
 <style>
+  :root {
+    color-scheme: dark;
+    --bg: #080c0d;
+    --bg-soft: #101617;
+    --fg: #f5f7f6;
+    --muted: #a8b2af;
+    --line: rgba(255, 255, 255, 0.14);
+    --accent: #54d98c;
+    --accent-strong: #8bf0b4;
+    --warning: #ffd66e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
   body {
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    color: #f2f2f7;
-    background: linear-gradient(180deg, #1c1c1e 0%, #2c2c2e 100%);
-    min-height: 100vh;
     margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  a { color: inherit; }
+
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 64px 24px;
-    box-sizing: border-box;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 58px;
+    padding: 10px max(24px, calc((100vw - 1120px) / 2));
+    border-bottom: 1px solid var(--line);
+    background: rgba(8, 12, 13, 0.82);
+    backdrop-filter: blur(16px);
   }
-  .card {
-    max-width: 640px;
-    text-align: center;
-  }
-  .logo {
-    width: 96px; height: 96px;
-    border-radius: 22px;
-    background: #1c2133;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 18px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
-  }
-  .moon {
-    width: 56px; height: 56px;
-    background: #ffcf56;
-    border-radius: 50%;
-    box-shadow: inset -16px 0 0 0 #1c2133;
-  }
-  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.3px; }
-  .tagline { color: #aeaeb2; margin: 0 0 28px; }
-  .links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-  .links a {
-    color: #f2f2f7;
-    background: #3a3a3c;
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
     text-decoration: none;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
+    letter-spacing: -0.02em;
   }
-  .links a:hover { background: #48484a; }
-  .links a.primary { background: #0a84ff; }
-  .links a.primary:hover { background: #0a72d8; }
-  .features { text-align: left; margin: 36px auto 0; max-width: 540px; color: #d1d1d6; }
-  .features h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin: 0 0 8px; }
-  .features ul { padding-left: 20px; }
-  .features li { margin: 6px 0; }
-  footer { color: #6e6e73; font-size: 13px; margin-top: 48px; }
-  footer a { color: #aeaeb2; }
+
+  .mark {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #17201f;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(84, 217, 140, 0.12);
+  }
+
+  .mark::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border-radius: 999px;
+    background: var(--warning);
+    box-shadow: inset -6px 0 0 #17201f;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+
+  .nav-links a:hover { color: var(--fg); }
+
+  .hero {
+    position: relative;
+    min-height: min(760px, 82vh);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(8, 12, 13, 0.96) 0%, rgba(8, 12, 13, 0.82) 42%, rgba(8, 12, 13, 0.30) 100%),
+      linear-gradient(180deg, rgba(8, 12, 13, 0.14), rgba(8, 12, 13, 0.86));
+  }
+
+  .hero-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0.84;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    width: min(1120px, calc(100vw - 48px));
+    margin: 0 auto;
+    padding: 80px 0 96px;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    color: var(--accent-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 18px var(--accent);
+  }
+
+  h1 {
+    max-width: 760px;
+    margin: 0;
+    font-size: clamp(44px, 8vw, 94px);
+    line-height: 0.92;
+    letter-spacing: -0.07em;
+  }
+
+  .hero-copy {
+    max-width: 620px;
+    margin: 24px 0 0;
+    color: #dce5e2;
+    font-size: clamp(18px, 2.3vw, 24px);
+    line-height: 1.45;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 34px;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+
+  .button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.13);
+  }
+
+  .button.primary {
+    color: #06100c;
+    background: var(--accent);
+    border-color: transparent;
+  }
+
+  .button.primary:hover { background: var(--accent-strong); }
+
+  .section {
+    width: min(1120px, calc(100vw - 48px));
+    margin: 0 auto;
+    padding: 78px 0;
+  }
+
+  .section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(260px, 0.7fr);
+    gap: 36px;
+    align-items: end;
+    margin-bottom: 28px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 58px);
+    line-height: 1;
+    letter-spacing: -0.055em;
+  }
+
+  .section-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .demo-card {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg-soft);
+  }
+
+  .demo-card.featured { grid-column: 1 / -1; }
+
+  .demo-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .demo-caption {
+    min-height: 102px;
+    padding: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  .demo-caption h3 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+
+  .demo-caption p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .feature-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 28px;
+  }
+
+  .feature {
+    min-height: 148px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .feature strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--fg);
+    font-size: 15px;
+  }
+
+  .feature span {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .install {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: center;
+    margin-top: 34px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #0d1413;
+  }
+
+  .install h2 {
+    font-size: clamp(24px, 4vw, 38px);
+  }
+
+  .install p {
+    margin: 8px 0 0;
+    color: var(--muted);
+  }
+
+  footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 14px;
+    width: min(1120px, calc(100vw - 48px));
+    margin: 0 auto;
+    padding: 28px 0 44px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  footer a { color: #d6dfdc; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 760px) {
+    .site-nav {
+      position: relative;
+      align-items: flex-start;
+      flex-direction: column;
+      padding: 16px 24px;
+    }
+
+    .nav-links {
+      width: 100%;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hero {
+      min-height: 78vh;
+      align-items: flex-end;
+    }
+
+    .hero::after {
+      background:
+        linear-gradient(180deg, rgba(8, 12, 13, 0.34) 0%, rgba(8, 12, 13, 0.88) 42%, rgba(8, 12, 13, 0.98) 100%),
+        linear-gradient(90deg, rgba(8, 12, 13, 0.86), rgba(8, 12, 13, 0.34));
+    }
+
+    .hero-media { object-position: center top; }
+
+    .hero-content {
+      width: calc(100vw - 40px);
+      padding: 72px 0 54px;
+    }
+
+    .hero-actions .button {
+      width: 100%;
+    }
+
+    .section {
+      width: calc(100vw - 40px);
+      padding: 58px 0;
+    }
+
+    .section-head,
+    .install {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-grid,
+    .feature-strip {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-caption { min-height: auto; }
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo"><div class="moon"></div></div>
-  <h1>Smart Auto Dark Mode</h1>
-  <p class="tagline">A Chrome extension that detects whether a site is already dark, and only switches the ones that aren't.</p>
-  <div class="links">
-    <a class="primary" href="https://github.com/dongt10/smart-auto-dark-mode">View on GitHub</a>
-    <a href="privacy.html">Privacy Policy</a>
-  </div>
+<header class="site-nav">
+  <a class="brand" href="#">
+    <span class="mark" aria-hidden="true"></span>
+    <span>Smart Auto Dark Mode</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="#demos">Demos</a>
+    <a href="#features">Features</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/dongt10/smart-auto-dark-mode">GitHub</a>
+  </nav>
+</header>
 
-  <div class="features">
-    <h2>What it does</h2>
-    <ul>
-      <li>Auto-detects dark sites by sampling background &amp; text luminance — leaves them alone.</li>
-      <li>Hints <code>color-scheme: dark</code> first so sites with their own dark theme switch natively.</li>
-      <li>Falls back to generated dark CSS that remaps light surfaces, text, borders, and controls.</li>
-      <li>Leaves media colors natural instead of flipping the entire page.</li>
-      <li>Slider tunes the generated palette from soft gray to near-black.</li>
-      <li>Per-site whitelist with subdomain matching.</li>
-    </ul>
-  </div>
-</div>
-<footer>MIT licensed · <a href="https://github.com/dongt10/smart-auto-dark-mode">github.com/dongt10/smart-auto-dark-mode</a></footer>
+<main>
+  <section class="hero" aria-labelledby="hero-title">
+    <img
+      class="hero-media"
+      src="store-assets/human-demo/00-human-demo-poster.png"
+      width="2880"
+      height="1800"
+      alt=""
+      fetchpriority="high"
+    >
+    <div class="hero-content">
+      <p class="eyebrow">Chrome extension</p>
+      <h1 id="hero-title">Bright sites get dark. Dark sites stay untouched.</h1>
+      <p class="hero-copy">
+        Smart Auto Dark Mode checks each page first, then applies a generated dark theme only when the site is still too bright. Photos, videos, and already-dark pages stay normal.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="https://github.com/dongt10/smart-auto-dark-mode">View on GitHub</a>
+        <a class="button" href="#demos">See demos</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="demos" aria-labelledby="demos-title">
+    <div class="section-head">
+      <h2 id="demos-title">See what changes, and what does not.</h2>
+      <p class="section-copy">
+        The demos show the extension's core decisions: brighten-to-dark conversion, media protection, native dark-site detection, beta fallback, and the small popup controls.
+      </p>
+    </div>
+
+    <div class="demo-grid">
+      <figure class="demo-card featured">
+        <img
+          src="store-assets/human-demo/01-before-after-bright-page.png"
+          width="2560"
+          height="1600"
+          alt="Before and after comparison showing a bright page converted into a dark page."
+        >
+        <figcaption class="demo-caption">
+          <h3>Bright pages become comfortable dark pages.</h3>
+          <p>Generated CSS darkens surfaces and preserves the page's layout, contrast, and readable text.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="demo-card">
+        <img
+          src="store-assets/human-demo/02-photos-stay-normal.png"
+          width="2560"
+          height="1600"
+          alt="Demo showing a colorful photo staying normal instead of being inverted."
+          loading="lazy"
+        >
+        <figcaption class="demo-caption">
+          <h3>Photos and videos keep their colors.</h3>
+          <p>Media elements are left alone so images do not turn into strange inverted negatives.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="demo-card">
+        <img
+          src="store-assets/human-demo/03-dark-sites-left-alone.png"
+          width="2560"
+          height="1600"
+          alt="Demo showing an already dark site being detected and left unchanged."
+          loading="lazy"
+        >
+        <figcaption class="demo-caption">
+          <h3>Already-dark sites stay untouched.</h3>
+          <p>The extension samples the rendered page first, then skips sites that already look right.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="demo-card">
+        <img
+          src="store-assets/human-demo/04-beta-for-tricky-sites.png"
+          width="2560"
+          height="1600"
+          alt="Demo showing the beta fallback mode for tricky web apps."
+          loading="lazy"
+        >
+        <figcaption class="demo-caption">
+          <h3>Beta mode handles tricky web apps.</h3>
+          <p>Per-site fallback mode gives complex pages a simpler renderer when generated CSS is not enough.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="demo-card">
+        <img
+          src="store-assets/human-demo/05-simple-popup-controls.png"
+          width="2560"
+          height="1600"
+          alt="Smart Auto Dark Mode popup controls showing the darkness slider and site controls."
+          loading="lazy"
+        >
+        <figcaption class="demo-caption">
+          <h3>One popup controls the current site.</h3>
+          <p>Turn it on or off, tune darkness, choose a renderer, and skip a site when you need to.</p>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="features" aria-labelledby="features-title">
+    <div class="section-head">
+      <h2 id="features-title">Built for real browsing.</h2>
+      <p class="section-copy">
+        Most dark-mode tools either invert everything or fight sites that already have dark mode. This one checks first and changes less.
+      </p>
+    </div>
+
+    <div class="feature-strip">
+      <div class="feature">
+        <strong>Smart detection</strong>
+        <span>Samples visible page surfaces and text luminance before applying anything.</span>
+      </div>
+      <div class="feature">
+        <strong>Generated dark CSS</strong>
+        <span>Remaps backgrounds, text, borders, forms, and code without page-wide inversion.</span>
+      </div>
+      <div class="feature">
+        <strong>Media stays natural</strong>
+        <span>Images, videos, canvas, SVG, and embeds are protected from color flipping.</span>
+      </div>
+      <div class="feature">
+        <strong>Per-site choices</strong>
+        <span>Whitelist sites, adjust darkness, and switch tricky pages to Beta mode.</span>
+      </div>
+    </div>
+
+    <div class="install">
+      <div>
+        <h2>Open source and local-first.</h2>
+        <p>No analytics, no remote code, no browsing data collection. Settings stay in Chrome local storage.</p>
+      </div>
+      <a class="button primary" href="https://github.com/dongt10/smart-auto-dark-mode">Get the code</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>MIT licensed &middot; Smart Auto Dark Mode</span>
+  <span><a href="privacy.html">Privacy Policy</a> &middot; <a href="https://github.com/dongt10/smart-auto-dark-mode/issues">Issues</a></span>
+</footer>
 </body>
 </html>
